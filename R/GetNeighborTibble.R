@@ -4,7 +4,7 @@
 #' @import magrittr
 #' @import tibble
 #' @import purrr
-GetNeighborTibble = function(obj, r, width, height, saturation, n_dummy_each){
+GetNeighborTibble = function(obj, r, width, height, saturation, n_aux_each){
   n = obj$mltplx_image$ppp$n
 
   #------------------------------------------------------------
@@ -18,30 +18,30 @@ GetNeighborTibble = function(obj, r, width, height, saturation, n_dummy_each){
 
   #------------------------------------------------------------
   # Checking dummy labels
-  if(length(n_dummy_each) == 1){
-    n_dummy_each = rep(n_dummy_each, length(unique_marks))
-    names(n_dummy_each) = unique_marks
+  if(length(n_aux_each) == 1){
+    n_aux_each = rep(n_aux_each, length(unique_marks))
+    names(n_aux_each) = unique_marks
   }
 
-  dummy_marks = names(n_dummy_each)
-  dummy_counts = unname(n_dummy_each)
+  dummy_marks = names(n_aux_each)
+  dummy_counts = unname(n_aux_each)
 
   if(length(dummy_marks) != length(unique_marks)){
     stop("length of dummy counts does not match length of unique marks")
   }
 
   if(! all( dummy_marks %in% unique_marks )){
-    stop("not all dummy marks in `n_dummy_each` are present in data")
+    stop("not all dummy marks in `n_aux_each` are present in data")
   }
 
   if(! all( unique_marks %in% dummy_marks )){
-    stop("not all marks in data are present in `n_dummy_each`")
+    stop("not all marks in data are present in `n_aux_each`")
   }
 
   #------------------------------------------------------------
   # Dummy points
-  dummy_x = runif(sum(n_dummy_each), 0, width)
-  dummy_y = runif(sum(n_dummy_each), 0, height)
+  dummy_x = runif(sum(n_aux_each), 0, width)
+  dummy_y = runif(sum(n_aux_each), 0, height)
   dummy_coords = matrix(c(dummy_x, dummy_y), ncol = 2)
 
   #------------------------------------------------------------
@@ -60,7 +60,7 @@ GetNeighborTibble = function(obj, r, width, height, saturation, n_dummy_each){
   #------------------------------------------------------------
   # Tibble
   neighbor_tib = tibble(
-    y = c(rep(1, n), rep(0, sum(n_dummy_each))),
+    y = c(rep(1, n), rep(0, sum(n_aux_each))),
     marks = c(actual_marks, rep(dummy_marks, dummy_counts))
   )
 

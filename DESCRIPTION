@@ -23,4 +23,4 @@ Suggests:
     rmarkdown
 VignetteBuilder: knitr
 Remotes: github::nateosher/DIMPLE
-
+RoxygenNote: 7.3.1

@@ -19,7 +19,7 @@ library(SLAC)
 library(tidyverse)
 library(DIMPLE)
 library(coda)
-set.seed(24601)
+set.seed(1234567)
 ```
 
 # Introduction
@@ -48,7 +48,7 @@ positive_matrix = matrix(
 # negative interaction matrix- types 1 and 2 avoid one another with high
 # probability (0.8)
 negative_matrix = matrix(
-  c(0, 0.8, 0.8, 0),
+  c(0, 0.9, 0.9, 0),
   nrow = 2
 )  
 ```
@@ -122,7 +122,7 @@ We can check the statistical significance of the coefficient estimates like so:
 glm_fit$fit %>% summary()
 ```
 
-The coefficient corresponding to negative interaction between points of type 1 and points of type 2 is highly statistically significant. While this should be taken with a grain of salt, since this is influenced by the ratio of auxiliary points to observed points, this method yields reasonable results in this case, as the other two interaction coefficients are small and not statistically significant.
+The coefficient corresponding to negative interaction between points of type 1 and points of type 2 is highly statistically significant. This should be taken with a grain of salt, since this is sensitive to the ratio of auxiliary points to observed points. It is also worth noting that in this case, the Type 1:Type 1 interaction is also significant, despite the fact that the type 1 does not interact with itself.
 
 Setting `fit_method` to "glmnet" yields similar results, but with the result of a `glmnet::cv.glmnet` call instead:
 
