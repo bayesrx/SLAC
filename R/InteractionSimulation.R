@@ -1,6 +1,6 @@
 #' Function for simulating data with positive or negative interaction
 #' @param n_each numeric vector where each entry is the number of cells to be
-#' simulated for a given type of point
+#' simulated for a given type of point. Length of this vector determines
 #' @param width number indicating the width of the desired window of simulation
 #' @param height number indicating the height of the desired window of simulation
 #' @param r_interaction number indicating the radius at which two points can be
@@ -11,19 +11,19 @@
 #' interacting with a point of type j, i.e. being generated within `r_interaction`
 #' microns of a point of type j.
 #' @param neg_m Defined analogously to `pos_m`, but for negative interactions.
-#' @param existing TODO: take existing configuration as starting point
 #' @param always_random_interaction If `TRUE`, a point is always chosen to
 #' randomly interact positively or negatively with another point. If `FALSE`,
 #' the type of interaction will only be selected randomly if the point interacts
 #' both positively and negatively with points of other types.
 #' @export
 #' @import spatstat.geom
+#' @import spatstat.random
 #' @import purrr
 #' @import tibble
 #' @import dplyr
 InteractionSimulation = function(n_each, width, height, r_interaction,
-                                 pos_m, neg_m, existing = NULL,
-                                 always_random_interaction = FALSE){
+                                 pos_m, neg_m,
+                                 always_random_interaction = TRUE){
   #------------------------------------------------------------
   # Preamble
   n_types = length(n_each)
@@ -83,7 +83,7 @@ InteractionSimulation = function(n_each, width, height, r_interaction,
                                        type = cur_type))
     } else {
       neg_sim = tryCatch({
-        rpoint(1, 1,
+        spatstat.random::rpoint(1, 1,
                win = spatstat.geom::intersect.owin(type_regions[[which_interaction]],
                                     full_window) %>%
                  spatstat.geom::complement.owin(frame = full_window))
@@ -91,7 +91,7 @@ InteractionSimulation = function(n_each, width, height, r_interaction,
       error = function(e){
         if(e$message == "Gave up after 1000 trials, 0 points accepted"){
           n_rejects[cur_type] <<- n_rejects[cur_type] + 1
-          return(rpoint(1, 1, win = full_window))
+          return(spatstat.random::rpoint(1, 1, win = full_window))
         } else {
           stop(e$message)
         }
@@ -103,7 +103,7 @@ InteractionSimulation = function(n_each, width, height, r_interaction,
     }
 
     type_regions[[cur_type]] = spatstat.geom::union.owin(type_regions[[cur_type]],
-                                          disc(radius = r_interaction,
+                               spatstat.geom::disc(radius = r_interaction,
                                                centre = c(
                                                  sim_data$x[nrow(sim_data)],
                                                  sim_data$y[nrow(sim_data)]
@@ -119,5 +119,9 @@ InteractionSimulation = function(n_each, width, height, r_interaction,
     }
   }
 
-  return(sim_data)
+  return(sim_data %>%
+           mutate(
+             type = paste("Type", type)
+           )
+         )
 }

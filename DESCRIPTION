@@ -6,6 +6,21 @@ Author: Who wrote it
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+Imports:
+  spatstat.geom,
+  spatstat.random,
+  purrr,
+  tibble,
+  dplyr,
+  magrittr,
+  DIMPLE,
+  coda
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Remotes: github::nateosher/DIMPLE
+

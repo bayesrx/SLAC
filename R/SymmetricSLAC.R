@@ -1,17 +1,34 @@
-#' Implementation of SLAC model used in simulation and application of
+#' Implementation of SLAC model used in simulation and application of data in
+#' "SLAC: A Data Augmentation Approach to Modeling Multiplex Imaging Data."
+#' @param mltplx_object object of class MltplxObject (from DIMPLE package).
+#' @param r radius of interaction between different points.
+#' @param width width of observation window of observed point process.
+#' @param height height of observation window of observed point process.
+#' @param n_aux_each number of auxiliary points per cell type. Can be either a
+#' single scalar number, or a named vector with length equal to the number of
+#' cell types in `mltplx_object`, and names corresponding to the types of cells in
+#' `mltplx_object`.
+#' @param fit_method method by which glm can be fit. "glm" will use the `glm`
+#' function, "glmnet" will use `cv.glmnet`, and "spikeslab" will use a spike-and-
+#' slab formulation implemented by the `BoomSpikeSlab` package.
+#' @param n_iter number of iterations to run the spike-and-slab model for. Must
+#' be provided when `fit_method` is set to "spikeslab."
+#' @param saturation optional. This term can be used to specify a maximum number
+#' of neighbors that a point can have, in the manner of Rajala et al. 2019. Its
+#' usage is generally not recommended unless you know what you are doing.
 #' @export
 SymmetricSLAC = function(mltplx_object,
                            r, width, height,
-                           n_dummy_each,
+                           n_aux_each,
                            fit_method = c("glm", "glmnet", "spikeslab"),
                            n_iter = NULL,
                            saturation = Inf){
   #------------------------------------------------------------
   # Preliminary computations
   n_cell_types = mltplx_object$mltplx_image$ppp$marks %>% unique %>% length
-  print("Generating dummy points...")
+  print("Generating auxiliary points...")
   neighbor_result = GetNeighborTibble(mltplx_object, r, width, height,
-                                saturation, n_dummy_each)
+                                saturation, n_aux_each)
   neighbors = neighbor_result$neighbor_tib
 
   #------------------------------------------------------------

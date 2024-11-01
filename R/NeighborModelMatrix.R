@@ -1,3 +1,8 @@
+#' Creates model matrix for neighbors. Designed to handle edge case where there
+#' is only one type of point without breaking.
+#' @param neighbor_tibble `neighbor_tib` from `GetNeighborTibble` function.
+#' @import dplyr
+#' @import tibble
 NeighborModelMatrix = function(neighbor_tibble){
   mark_levels = unique(neighbor_tibble$marks)
   model_matrix = neighbor_tibble

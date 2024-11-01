@@ -1,0 +1,197 @@
+---
+title: "basic-usage"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{basic-usage}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(SLAC)
+library(tidyverse)
+library(DIMPLE)
+library(coda)
+set.seed(24601)
+```
+
+# Introduction
+
+This vignette offers a simple tutorial on how to use the simulation and model fitting methods of the `SLAC` package.
+
+# Simulation
+
+We'll start by simulating some data. We'll simulate two cell types with 200 points per type. First, we specify the parameters:
+
+```{r}
+width = 700 # width of simulation 
+height = 500 # height of simulation window
+r = 30 # radius of interaction
+
+n_each = c(200, 200) %>% # number of cells of each type (200 of type 1, 200 of type 2)
+  set_names(c("Type 1", "Type 2"))
+
+# positive interaction matrix- no cells interact positively
+positive_matrix = matrix(
+  0,
+  nrow = 2,
+  ncol = 2
+)
+
+# negative interaction matrix- types 1 and 2 avoid one another with high
+# probability (0.8)
+negative_matrix = matrix(
+  c(0, 0.8, 0.8, 0),
+  nrow = 2
+)  
+```
+
+Next, we simulate data using the algorithm specified in the paper "SLAC: A Data Augmentation Approach to Modeling Multiplex Imaging Data." 
+
+```{r}
+raw_simulated_data = InteractionSimulation(n_each, 
+                                           width, height, r,
+                                           positive_matrix, negative_matrix)
+
+raw_simulated_data
+```
+
+We can visualize the resulting data:
+
+```{r}
+raw_simulated_data %>% 
+  ggplot() + 
+    geom_point(aes(x = x, y = y, color = type)) + 
+    theme_bw()
+```
+
+If you aren't familiar with spatial point process modeling, it might not be obvious that the points are negatively interacting. To check this, we can fit a *SLAC* model. First, we convert the raw data to a `MltplxObject` object using the `DIMPLE` package (found [here](https://github.com/nateosher/DIMPLE)).
+
+```{r}
+simulated_data = new_MltplxObject(x = raw_simulated_data$x,
+                                  y = raw_simulated_data$y,
+                                  marks = raw_simulated_data$type,
+                                  slide_id = paste0("simulated data"))
+
+simulated_data
+```
+
+Finally, we can fit the model on the simulated data. First, we have to set the number of auxiliary points to use for each type. We'll use a 4:1 ratio of auxiliary to observed points, the point at which you tend to see diminishing returns to power when observing more controls in a case:control study.
+
+```{r}
+n_aux_each = 4*n_each
+```
+
+
+Note that we can use three possible methods: "glm", "glmnet", and "spikeslab". The method that will be best will depend on the goals and constraints of your analysis; however, below I'll demonstrate how to use all three options. 
+
+The "glm" option will fit the method using the `glm` function:
+
+```{r}
+glm_fit = SymmetricSLAC(simulated_data, r, width, height,
+                        n_aux_each, fit_method = "glm")
+```
+
+The resulting object will have three components. `raw_points` is a data set containing the observed points as well as the auxiliary points, along with a variable `observed` which is 1 when the point is from the observed data set, and 0 when the point is an auxiliary point.
+
+```{r}
+glm_fit$raw_points %>% glimpse()
+```
+
+Note that there are 2,000 rows in this data set, corresponding to the 400 observed points as well as the 1,600 auxiliary points (4 * 200 per type, times two types). `raw_data` is the data set that is actually used in the logistic regression fitting:
+
+```{r}
+glm_fit$raw_data %>% glimpse()
+```
+
+Finally, `fit` returns the actual fit object, which in this case is just a `glm` object:
+
+```{r}
+glm_fit$fit
+```
+We can check the statistical significance of the coefficient estimates like so:
+
+```{r}
+glm_fit$fit %>% summary()
+```
+
+The coefficient corresponding to negative interaction between points of type 1 and points of type 2 is highly statistically significant. While this should be taken with a grain of salt, since this is influenced by the ratio of auxiliary points to observed points, this method yields reasonable results in this case, as the other two interaction coefficients are small and not statistically significant.
+
+Setting `fit_method` to "glmnet" yields similar results, but with the result of a `glmnet::cv.glmnet` call instead:
+
+```{r}
+glmnet_fit = SymmetricSLAC(simulated_data, r, width, height,
+                        n_aux_each, fit_method = "glmnet")
+
+glmnet_fit$fit
+```
+
+We can choose the penalization parameter that minimizes cross validated error, or the largest one that produces a CVE within 1 SE of the minimum CVE. I recommend the latter, since it tends to perform better in simulations in my experience:
+
+```{r}
+which_lambda = which(glmnet_fit$fit$lambda == glmnet_fit$fit$lambda.1se)
+glmnet_fit$fit$glmnet.fit$beta[,which_lambda]
+```
+
+This method again selects the correct interaction coefficient.
+
+Finally, setting `fit_method` equal to "spikeslab" yields a fitting object from the `BoomSpikeSlab` package. Note that we have to specify `n_iter` when using this method.
+
+```{r}
+spikeslab_fit = SymmetricSLAC(simulated_data, r, width, height,
+                        n_aux_each, fit_method = "spikeslab",
+                        n_iter = 6000)
+```
+
+First, we check for convergence via a global test on the log-likelihood. The results look pretty good: 
+
+```{r}
+plot(spikeslab_fit$fit$log.likelihood, type = "l")
+```
+
+We can use the Geweke diagnostic to formally check for convergence. We will use the `coda` package for this:
+
+```{r}
+coda::geweke.diag(
+  spikeslab_fit$fit$log.likelihood[3001:6000] %>% 
+    coda::as.mcmc()
+)
+```
+
+This indicates that the chain has converged in the last 3,000 iterations, as we suspected.
+
+First, we can look at the posterior means for the various parameters like so:
+
+```{r}
+spikeslab_fit$fit$beta[3001:6000,] %>% colMeans()
+```
+
+
+Note that the negative sign of the `Type 1:Type 2` coefficient indicates negative interaction in the simulated data, exactly as we simulated it. the other interaction coefficients are small in magnitude, but to see the posterior probability of inclusion for the various terms in the model, we look at the proportion of them that are non-zero:
+
+
+```{r}
+(spikeslab_fit$fit$beta[3001:6000,] != 0) %>% colMeans()
+```
+
+This yields exactly the result we'd hope: very low probability of interaction between Type 1 points and other Type 1 points, as well as a low probability of interaction between Type 2 points and other Type 2 points, but an extremely high posterior probability of interaction between points of Type 1 and Type 2.
+
+
+
+
+
+
+
+
+
+
+
+
+

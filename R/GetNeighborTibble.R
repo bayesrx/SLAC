@@ -1,5 +1,5 @@
 #' Given a MultiplexObject object, creates a tibble of points and dummy points
-#' with neighbor counts.
+#' with neighbor counts. For internal use by `SymmetricSlac` function.
 #' @import dplyr
 #' @import magrittr
 #' @import tibble
@@ -94,7 +94,7 @@ GetNeighborTibble = function(obj, r, width, height, saturation, n_dummy_each){
     neighbor_tib = neighbor_tib %>%
                     select(y, marks, contains(":")),
     points = full_coords %>%
-      set_colnames(c("x", "y")) %>%
+      magrittr::set_colnames(c("x", "y")) %>%
       as_tibble() %>%
       mutate(
         marks = neighbor_tib$marks,
