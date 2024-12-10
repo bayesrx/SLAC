@@ -12,6 +12,7 @@ LazyData: true
 Imports:
   spatstat.geom,
   spatstat.random,
+  spatstat.explore,
   purrr,
   tibble,
   dplyr,

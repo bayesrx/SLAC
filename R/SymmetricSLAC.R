@@ -1,9 +1,8 @@
 #' Implementation of SLAC model used in simulation and application of data in
 #' "SLAC: A Data Augmentation Approach to Modeling Multiplex Imaging Data."
-#' @param mltplx_object object of class MltplxObject (from DIMPLE package).
+#' @param obj object of class MltplxObject (from DIMPLE package) or ppp (from
+#' spatstat).
 #' @param r radius of interaction between different points.
-#' @param width width of observation window of observed point process.
-#' @param height height of observation window of observed point process.
 #' @param n_aux_each number of auxiliary points per cell type. Can be either a
 #' single scalar number, or a named vector with length equal to the number of
 #' cell types in `mltplx_object`, and names corresponding to the types of cells in
@@ -17,17 +16,24 @@
 #' of neighbors that a point can have, in the manner of Rajala et al. 2019. Its
 #' usage is generally not recommended unless you know what you are doing.
 #' @export
-SymmetricSLAC = function(mltplx_object,
-                           r, width, height,
-                           n_aux_each,
+SymmetricSLAC = function(obj, r, n_aux_each,
                            fit_method = c("glm", "glmnet", "spikeslab"),
                            n_iter = NULL,
                            saturation = Inf){
+
+  if(class(obj)[1] == "MltplxObject"){
+    ppp_obj = obj$mltplx_image$ppp
+  } else if(class(obj)[1] == "ppp"){
+    ppp_obj = obj
+  } else {
+    stop("`obj` parameter should be object of class `MltplxObject` or `ppp`")
+  }
+
   #------------------------------------------------------------
   # Preliminary computations
-  n_cell_types = mltplx_object$mltplx_image$ppp$marks %>% unique %>% length
+  n_cell_types = ppp_obj$marks %>% unique %>% length
   print("Generating auxiliary points...")
-  neighbor_result = GetNeighborTibble(mltplx_object, r, width, height,
+  neighbor_result = GetNeighborTibble(ppp_obj, r,
                                 saturation, n_aux_each)
   neighbors = neighbor_result$neighbor_tib
 

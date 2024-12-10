@@ -95,7 +95,7 @@ Note that we can use three possible methods: "glm", "glmnet", and "spikeslab". T
 The "glm" option will fit the method using the `glm` function:
 
 ```{r}
-glm_fit = SymmetricSLAC(simulated_data, r, width, height,
+glm_fit = SymmetricSLAC(simulated_data, r,
                         n_aux_each, fit_method = "glm")
 ```
 
@@ -127,7 +127,7 @@ The coefficient corresponding to negative interaction between points of type 1 a
 Setting `fit_method` to "glmnet" yields similar results, but with the result of a `glmnet::cv.glmnet` call instead:
 
 ```{r}
-glmnet_fit = SymmetricSLAC(simulated_data, r, width, height,
+glmnet_fit = SymmetricSLAC(simulated_data, r,
                         n_aux_each, fit_method = "glmnet")
 
 glmnet_fit$fit
@@ -140,12 +140,12 @@ which_lambda = which(glmnet_fit$fit$lambda == glmnet_fit$fit$lambda.1se)
 glmnet_fit$fit$glmnet.fit$beta[,which_lambda]
 ```
 
-This method again selects the correct interaction coefficient.
+This method selects only the correct interaction coefficient. However, note that there is no uncertainty quantification provided.
 
 Finally, setting `fit_method` equal to "spikeslab" yields a fitting object from the `BoomSpikeSlab` package. Note that we have to specify `n_iter` when using this method.
 
 ```{r}
-spikeslab_fit = SymmetricSLAC(simulated_data, r, width, height,
+spikeslab_fit = SymmetricSLAC(simulated_data, r,
                         n_aux_each, fit_method = "spikeslab",
                         n_iter = 6000)
 ```
@@ -181,7 +181,7 @@ Note that the negative sign of the `Type 1:Type 2` coefficient indicates negativ
 (spikeslab_fit$fit$beta[3001:6000,] != 0) %>% colMeans()
 ```
 
-This yields exactly the result we'd hope: very low probability of interaction between Type 1 points and other Type 1 points, as well as a low probability of interaction between Type 2 points and other Type 2 points, but an extremely high posterior probability of interaction between points of Type 1 and Type 2.
+This yields exactly the result we'd hope: very low probability of interaction between Type 1 points and other Type 1 points, as well as a very low probability of interaction between Type 2 points and other Type 2 points, but an extremely high posterior probability of interaction between points of Type 1 and Type 2. This method selects the correct effects (when using a cutoff probability of 0.5, i.e. median probability selection), but also quantifies our uncertainty about the other two. 
 
 
 

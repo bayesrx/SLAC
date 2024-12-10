@@ -1,15 +1,19 @@
-#' Given a MultiplexObject object, creates a tibble of points and dummy points
-#' with neighbor counts. For internal use by `SymmetricSlac` function.
+#' Given a ppp object, creates a tibble of points
+#' and dummy points with neighbor counts. For internal use by `SymmetricSlac`
+#' function.
 #' @import dplyr
 #' @import magrittr
 #' @import tibble
 #' @import purrr
-GetNeighborTibble = function(obj, r, width, height, saturation, n_aux_each){
-  n = obj$mltplx_image$ppp$n
+GetNeighborTibble = function(obj, r, saturation, n_aux_each){
+  if(class(obj)[1] != "ppp"){
+    stop(paste0("`obj` argument to `GetNeighborTibble` should be `ppp` object"))
+  }
+  n = obj$n
 
   #------------------------------------------------------------
   # Marks
-  actual_marks = obj$mltplx_image$ppp$marks %>% as.character()
+  actual_marks = obj$marks %>% as.character()
   unique_marks = actual_marks %>% unique() %>% sort()
   mark_pairs = tidyr::crossing(m1 = unique_marks, m2 = unique_marks) %>%
     filter(
@@ -40,15 +44,14 @@ GetNeighborTibble = function(obj, r, width, height, saturation, n_aux_each){
 
   #------------------------------------------------------------
   # Dummy points
-  dummy_x = runif(sum(n_aux_each), 0, width)
-  dummy_y = runif(sum(n_aux_each), 0, height)
+  dummy_sim = runifpoint(sum(n_aux_each), win = obj$window)
+  dummy_x = dummy_sim$x
+  dummy_y = dummy_sim$y
   dummy_coords = matrix(c(dummy_x, dummy_y), ncol = 2)
 
   #------------------------------------------------------------
   # Regular points
-  coords_mat = matrix(c(obj$mltplx_image$ppp$x,
-                        obj$mltplx_image$ppp$y),
-                      ncol = 2)
+  coords_mat = matrix(c(obj$x, obj$y), ncol = 2)
 
   #------------------------------------------------------------
   # Full matrix
